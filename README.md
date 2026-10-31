@@ -8,6 +8,8 @@ The project aims to model and manage payment data, validate its structure, retri
 
 This project integrates two practical assignments (TP1 and TP2) into one coherent application based on the FinTech domain.
 
+Instead of treating XML processing and Web Services as unrelated exercises, PayInsight connects them through a common payment-management system.
+
 ## 2. Project Objectives
 
 The main objectives are:
@@ -20,6 +22,7 @@ The main objectives are:
 * Create and publish a SOAP Web Service.
 * Retrieve transaction information through SOAP operations.
 * Test the application using JUnit and SoapUI.
+* Integrate different technologies into one modular Java application.
 
 ## 3. Technologies Used
 
@@ -48,6 +51,16 @@ PayInsight/
 │   ├── payments.xml
 │   └── payments.xsd
 │
+├── images/
+│   ├── validation-success.png
+│   ├── xpath-results.png
+│   ├── validation-error.png
+│   ├── junit-tests.png
+│   ├── soap-get-transaction.png
+│   ├── soap-approved-transactions.png
+│   ├── soap-transactions-above-amount.png
+│   └── soap-transaction-count.png
+│
 ├── src/
 │   ├── main/
 │   │   └── java/
@@ -71,16 +84,6 @@ PayInsight/
 │           └── com/
 │               └── payinsight/
 │                   └── PayInsightTest.java
-│
-├── images/
-│   ├── validation-success.png
-│   ├── xpath-results.png
-│   ├── validation-error.png
-│   ├── junit-tests.png
-│   ├── soap-get-transaction.png
-│   ├── soap-approved-transactions.png
-│   ├── soap-transactions-above-amount.png
-│   └── soap-transaction-count.png
 │
 ├── pom.xml
 ├── README.md
@@ -175,11 +178,11 @@ If the XML document is valid, the application displays a successful validation m
 
 If the XML document contains an invalid value or violates the schema, validation reports an error.
 
-### Validation Results
+### Successful XML Validation
 
 ![Successful XML Validation](images/validation-success.png)
 
-### Validation Error Example
+### XML Validation Error Example
 
 ![XML Validation Error](images/validation-error.png)
 
@@ -237,7 +240,161 @@ Instead of creating an unrelated calculator service, the SOAP functionality is i
 
 The Web Service allows external applications to retrieve payment transaction information.
 
-### 9.1 Service Architecture
+### 9.1 Why Integrate TP1 and TP2?
+
+TP1 and TP2 introduce different technologies, but they can serve complementary purposes within the same application.
+
+**TP1 — XML Data Management**
+
+* Represents payment information using XML.
+* Defines data constraints using XSD.
+* Validates XML documents.
+* Retrieves information using XPath.
+
+**TP2 — SOAP Web Services**
+
+* Exposes payment-related operations.
+* Allows external applications to communicate with PayInsight.
+* Returns transaction information through SOAP responses.
+
+The integration connects the two assignments through a shared payment-data source.
+
+TP1 provides the data representation and processing foundation, while TP2 provides an interface for accessing that data remotely.
+
+### 9.2 Overall System Architecture
+
+The following diagram illustrates the relationship between the main components of PayInsight.
+
+```mermaid
+flowchart TD
+    A["PayInsight Application"]
+
+    A --> B["TP1: XML Data Management"]
+    A --> C["TP2: SOAP Web Service"]
+
+    B --> D["payments.xml"]
+    B --> E["payments.xsd"]
+    B --> F["XPath Queries"]
+
+    D --> G["PaymentDataService"]
+    E --> H["XML Validation"]
+
+    G --> I["Transaction Objects"]
+    I --> J["PaymentService"]
+
+    K["IPaymentService"] --> J
+    J --> L["SOAP Endpoint"]
+    L --> M["External Client - SoapUI"]
+    M --> N["SOAP Requests"]
+    L --> O["SOAP Responses"]
+
+    P["Main.java"] --> H
+    P --> F
+```
+
+### 9.3 Java Component Architecture
+
+Each Java class has a specific responsibility.
+
+```mermaid
+flowchart TD
+    A["PayInsightServer.java"] --> B["PaymentService.java"]
+    C["IPaymentService.java"] --> B
+
+    B --> D["PaymentDataService.java"]
+
+    D --> E["Main.validateXML()"]
+    D --> F["payments.xml"]
+
+    E --> G["payments.xsd"]
+
+    D --> H["Transaction.java"]
+    H --> B
+```
+
+| Component                 | Responsibility                   |
+| ------------------------- | -------------------------------- |
+| `Main.java`               | XML validation and XPath queries |
+| `Transaction.java`        | Represents a payment transaction |
+| `PaymentDataService.java` | Reads and retrieves payment data |
+| `IPaymentService.java`    | Defines SOAP operations          |
+| `PaymentService.java`     | Implements SOAP business logic   |
+| `PayInsightServer.java`   | Publishes the SOAP endpoint      |
+
+### 9.4 How the Components Work Together
+
+The integration follows these steps:
+
+**Step 1 — Data Representation**
+
+Payment information is stored in `payments.xml`, including customers, merchants, terminals, transactions, and error codes.
+
+**Step 2 — Data Validation**
+
+The XML document is validated against `payments.xsd` to ensure that its structure and values respect the defined constraints.
+
+**Step 3 — Data Access**
+
+`PaymentDataService` reads the XML document and provides methods to retrieve transaction information.
+
+Before accessing the data, the service validates the XML using the existing validation functionality in `Main.java`.
+
+**Step 4 — SOAP Service**
+
+`PaymentService` implements the operations defined by `IPaymentService` and uses `PaymentDataService` to access payment information.
+
+**Step 5 — External Communication**
+
+`PayInsightServer` publishes the SOAP service. External clients, such as SoapUI, can send requests and receive transaction information.
+
+### 9.5 SOAP Request and Response Sequence
+
+The following sequence illustrates what happens when an external client requests transaction `TX001`.
+
+```mermaid
+sequenceDiagram
+    participant Client as SoapUI Client
+    participant Server as PayInsightServer
+    participant Service as PaymentService
+    participant Data as PaymentDataService
+    participant XML as payments.xml
+
+    Client->>Server: SOAP Request (TX001)
+    Server->>Service: Invoke getTransaction()
+    Service->>Data: getTransaction("TX001")
+    Data->>Data: Validate XML using Main.validateXML()
+    Data->>XML: Read transaction data
+    XML-->>Data: Transaction information
+    Data-->>Service: Transaction object
+    Service-->>Client: SOAP Response
+```
+
+### 9.6 Example of Integration
+
+Consider an external application that wants to retrieve transaction `TX001`.
+
+The process is:
+
+1. The client sends a SOAP request containing the transaction ID.
+2. The SOAP service receives the request.
+3. `PaymentService` calls `PaymentDataService`.
+4. `PaymentDataService` validates and reads the XML data.
+5. It retrieves TX001 and creates a `Transaction` object.
+6. The SOAP service returns the transaction information to the client.
+
+This demonstrates how the XML data management component and SOAP Web Service component work together within PayInsight.
+
+### 9.7 Benefits of This Architecture
+
+* **Separation of responsibilities:** Each component has a specific task.
+* **Data consistency:** SOAP operations use the same XML data source.
+* **Reusability:** External applications can retrieve payment information through SOAP.
+* **Interoperability:** SOAP allows applications written in different programming languages to communicate.
+* **Maintainability:** Separating data access from service logic makes the application easier to extend.
+
+## 10. SOAP Web Service Implementation
+
+### 10.1 Service Components
 
 The implementation uses the following components:
 
@@ -261,7 +418,7 @@ Implements the service interface and contains the business logic for the payment
 
 Publishes the SOAP Web Service using `Endpoint.publish()`.
 
-### 9.2 Available SOAP Operations
+### 10.2 Available SOAP Operations
 
 The service provides four operations:
 
@@ -272,7 +429,7 @@ The service provides four operations:
 | `getTransactionsAboveAmount` | Retrieves transactions above a specified amount |
 | `getTransactionCount`        | Returns the total number of transactions        |
 
-### 9.3 SOAP Endpoint
+### 10.3 SOAP Endpoint
 
 The service is published locally at:
 
@@ -288,7 +445,7 @@ http://localhost:8086/PayInsight/PaymentService?wsdl
 
 The WSDL (Web Services Description Language) describes the available operations, parameters, and service endpoint.
 
-### 9.4 SOAP Testing with SoapUI
+### 10.4 SOAP Testing with SoapUI
 
 The service was tested using SoapUI.
 
@@ -338,7 +495,7 @@ Expected result:
 
 ![SOAP Transaction Count](images/soap-transaction-count.png)
 
-## 10. Unit Testing with JUnit
+## 11. Unit Testing with JUnit
 
 JUnit 4 is used to verify the main application functionalities.
 
@@ -375,7 +532,7 @@ BUILD SUCCESS
 
 ![JUnit Test Results](images/junit-tests.png)
 
-## 11. How to Run the Project
+## 12. How to Run the Project
 
 ### Prerequisites
 
@@ -383,7 +540,7 @@ Make sure you have:
 
 * Java Development Kit (JDK)
 * IntelliJ IDEA
-* Apache Maven support
+* Maven support
 * SoapUI (for SOAP testing)
 
 ### Step 1: Clone the Repository
@@ -452,7 +609,7 @@ BUILD SUCCESS
 
 You can also run the Maven `package` lifecycle to compile, test, and package the application.
 
-## 12. Conclusion
+## 13. Conclusion
 
 PayInsight demonstrates the integration of XML technologies and Java Web Services in a Smart Payment Management System.
 
@@ -460,8 +617,10 @@ The first part of the project focuses on XML data modeling, XSD validation, and 
 
 The second part extends the application with a SOAP Web Service that provides access to payment transaction information.
 
+The integration connects XML data management with remote service access through a modular Java architecture.
+
 Finally, JUnit and SoapUI are used to test the application and verify the functionality of its components.
 
-The project provides practical experience with structured data, XML processing, Java development, Web Services, and software testing.
+The project provides practical experience with structured data, XML processing, Java development, Web Services, software architecture, and testing.
 
 **Note:** PayInsight is an academic demonstration project. It uses sample payment data and does not process real financial transactions.
