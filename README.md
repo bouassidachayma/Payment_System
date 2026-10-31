@@ -546,7 +546,7 @@ Make sure you have:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone YOUR_REPOSITORY_URL
+git clone https://github.com/bouassidachayma/PayInsight.git
 ```
 
 Open the project in IntelliJ IDEA and wait for Maven to load the dependencies.
