@@ -37,3 +37,18 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Maven
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
